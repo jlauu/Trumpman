@@ -1,0 +1,9 @@
+*.sw*
+.env
+__pycache__/
+
+# virtualenv
+bin/
+include/
+lib/
+pip-selfcheck.json
