@@ -2,7 +2,7 @@
 import os
 from string import ascii_lowercase
 from random import choice
-from flask import Flask, json, g
+from flask import Flask, json, g, render_template
 from Hangman import Hangman, InvalidGuess
 
 # Utils
@@ -36,11 +36,15 @@ def get_game():
 
 @app.route('/')
 def index():
-    return json.dumps(g.game.get_state())
+    return render_template('index.html')
 
 @app.route('/reset', methods=['POST'])
 def reset():
     g.game = new_game(vocab)
+    return json.dumps(g.game.get_state())
+
+@app.route('/game', methods=['GET'])
+def game():
     return json.dumps(g.game.get_state())
 
 @app.route('/guess/<string:letter>', methods=['POST'])

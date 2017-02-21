@@ -2,6 +2,12 @@
 .env
 __pycache__/
 
+#npm
+node_modules/
+
+#semantic-ui
+semantic/
+
 # virtualenv
 bin/
 include/
