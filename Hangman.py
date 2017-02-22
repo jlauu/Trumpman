@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from random import choice
 from string import ascii_lowercase
 from enum import Enum
 
@@ -18,53 +19,84 @@ class InvalidGuess(Exception):
         rv['message'] = self.message
         return rv
 
-class Hangman:
-    """Representation of a game session"""
+class HangmanClient:
+    """A client game session"""
     MAX_GUESSES = 10
     class Status(Enum):
         ongoing = 0
         won = 1
         lost = 2
 
-    def __init__(self, answer, alphabet=ascii_lowercase):
-        self.answer = answer.lower().strip()
+    def __init__(self, vocab, alphabet=ascii_lowercase):
+        """Given a vocabulary to draw a random word, 
+        returns a new game session"""
+        self.vocab = [w for w in vocab if len(w) <= HangmanClient.MAX_GUESSES]
+        self.won = 0
+        self.lost = 0
+        self.answers = set()
         self.alphabet = set(alphabet)
+        self.new_game()
+
+    def new_game(self, answer=None):
+        if answer is None:
+          self.answer = self._draw_word()
+        else:
+          self.answer = answer.lower().strip()
         self.guesses = 0
-        self.status = Hangman.Status.ongoing
-        self.letters_left = set(answer)
+        self.status = HangmanClient.Status.ongoing
+        self.letters_left = set(self.answer)
         self.letters_guessed = set()
 
     def guess(self, letter):
         """Advances the game state given the next guess"""
         letter = letter.lower()
-        if self.status != Hangman.Status.ongoing:
+        if self.status != HangmanClient.Status.ongoing:
             raise InvalidGuess('Game is already over', payload=self.get_state())
         if letter not in self.alphabet or len(letter) != 1:
-            raise InvalidGuess('Invalid guess given', payload=self.get_state())
+            raise InvalidGuess(
+                "Invalid guess '{}' was made".format(letter), 
+                payload=self.get_state())
         if letter in self.letters_guessed:
-            raise InvalidGuess('Guess already made', payload=self.get_state())
+            raise InvalidGuess(
+              "You already guessed '{}'".format(letter), 
+               payload=self.get_state())
+        if letter not in self.letters_left:
+            self.guesses += 1
         letter = set(letter)
         self.letters_guessed |= letter
         self.letters_left -= letter
-        self.guesses += 1
         return self.get_state()
 
     def get_state(self):
         """Returns an object representing the current game state"""
-        if len(self.letters_left) == 0:
-            self.status = Hangman.Status.won
-        elif self.guesses >= Hangman.MAX_GUESSES:
-            self.status = Hangman.Status.lost
-        return {
+        if len(self.letters_left) == 0 and \
+            self.answer not in self.answers:
+            self.status = HangmanClient.Status.won
+            self.won += 1
+        elif self.guesses >= HangmanClient.MAX_GUESSES and \
+             self.answer not in self.answers:
+            self.status = HangmanClient.Status.lost
+            self.lost += 1
+        payload = {
+          'max_guesses': HangmanClient.MAX_GUESSES,
           'status': self.status.name,
-          'guesses_left': Hangman.MAX_GUESSES - self.guesses,
+          'guesses_left': HangmanClient.MAX_GUESSES - self.guesses,
           'letters_guessed': list(self.letters_guessed),
-          'word_with_blanks': self.get_word_with_blanks()
+          'word_with_blanks': self.get_word_with_blanks(),
+          'won': self.won,
+          'lost': self.lost
         }
+        if self.status != HangmanClient.Status.ongoing:
+            payload['letters_left'] = list(self.letters_left)
+            payload['answer'] = self.answer
+        return payload
 
     def get_word_with_blanks(self):
-        return ''.join(' ' if c in self.letters_left else c \
+        return ''.join('_' if c in self.letters_left else c \
                        for c in self.answer)
+
+    def _draw_word(self):
+        return choice(self.vocab)
 
     def __repr__(self):
         return '<Hangman {0!s}>'.format(self.get_state())

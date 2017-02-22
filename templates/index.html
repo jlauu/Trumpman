@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <title>Shoobx Hangman</title>
+  <title>Trumpman</title>
   <link 
     rel="stylesheet" 
     type="text/css" 
@@ -9,8 +9,21 @@
   />
 </head>
 <body>
-  <div class="ui main container">
-    <h1 class="ui header">Shoobx Hangman!</h1>
+  <div id="container">
+    <div id="header" class="ui centered"></div>
+    <div id="content" class="ui container">
+      <div id="hangman">
+        {% for i in range(10) %}
+          <img 
+            style="z-index: {{20 - i}}; visibility: hidden"
+            class="hidden"
+            id="hangman-{{i}}"
+            src="{{url_for('static', filename='img/hangman/{}.png'.format(i))}}"
+          />
+        {% endfor %}
+      </div>
+    </div>
+    <div id="footer" class="ui centered"></div>
   </div>
   <script
     src="https://code.jquery.com/jquery-3.1.1.min.js"

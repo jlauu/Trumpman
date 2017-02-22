@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
-import os
 from string import ascii_lowercase
-from random import choice
 from flask import Flask, json, g, render_template
-from Hangman import Hangman, InvalidGuess
+from Hangman import HangmanClient, InvalidGuess
 
 # Utils
-
-def generate_game_key():
-    return os.urandom(24)
-
 def parse_vocab(filepath, alphabet=ascii_lowercase):
     """Returns a list of words given a file with one word per line"""
     alphabet = set(alphabet)
@@ -18,38 +12,39 @@ def parse_vocab(filepath, alphabet=ascii_lowercase):
             word = word.lower().strip()
             if set(word).issubset(alphabet):
                 yield word
-
-def new_game(vocab, alphabet=ascii_lowercase):
-    """Given a vocabulary to draw a random word, returns a new game session"""
-    answer = choice([w for w in vocab if len(w) <= Hangman.MAX_GUESSES])
-    return Hangman(answer, alphabet=ascii_lowercase)
-
 # App
 
 app = Flask(__name__)
 vocab = list(parse_vocab('./2of12.txt'))
-game = new_game(vocab)
 
-@app.before_request
-def get_game():
-    g.game = game
+# Uncertain what thread/concurrency-related properties are 
+# with a global object
+# Alternatives: 
+#   - game state in sessions + serializing/deserializing
+#   - database with users, games, game history, etc.
+#   - global hash of user-key to game session + storing key in session
+global game
+game = HangmanClient(vocab)
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/reset', methods=['POST'])
-def reset():
-    g.game = new_game(vocab)
-    return json.dumps(g.game.get_state())
-
 @app.route('/game', methods=['GET'])
-def game():
-    return json.dumps(g.game.get_state())
+def get_game():
+    global game
+    return json.dumps(game.get_state())
+
+@app.route('/game/new', methods=['POST'])
+def new_game():
+    global game
+    game.new_game()
+    return json.dumps(game.get_state())
 
 @app.route('/guess/<string:letter>', methods=['POST'])
 def guess(letter):
-    return json.dumps(g.game.guess(letter))
+    global game
+    return json.dumps(game.guess(letter))
 
 @app.errorhandler(InvalidGuess)
 def handle_invalid_guess(error):
