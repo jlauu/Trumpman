@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+from random import choice
 from binascii import hexlify
 from string import ascii_lowercase
 from flask import Flask, json, g, render_template, abort, session
@@ -17,13 +18,16 @@ def parse_vocab(filepath, alphabet=ascii_lowercase):
             word = word.lower().strip()
             if set(word).issubset(alphabet):
                 yield word
+
+def pick_answer(vocab):
+    return choice([w for w in vocab if len(set(w)) <= HangmanClient.MAX_GUESSES])
+
 # App
 
 app = Flask(__name__)
 app.secret_key = '8a1f9630c72259b25bf311bacdcabd3b1bdfa0f057f324cd'
 #app.secret_key = os.environ['SECRET_KEY']
 vocab = list(parse_vocab('./2of12.txt'))
-game = HangmanClient(vocab)
 clients = {}
 
 def register_user():
@@ -31,9 +35,8 @@ def register_user():
         session['user'] = gen_user_key()
     return session['user']
 
-def _get_game(user):
+def get_client(user):
     try:
-        print(user)
         return g.clients[user]
     except KeyError:
         abort(404)
@@ -50,24 +53,23 @@ def index():
 @app.route('/game', methods=['GET'])
 def get_game():
     user = register_user()
-    game = _get_game(user)
+    game = get_client(user)
     return json.dumps(game.get_state())
 
 @app.route('/game/new', methods=['POST'])
 def new_game():
     user = register_user()
-    if user in g.clients:
-        game = g.clients.get(user)
-        game.new_game()
-    else:
-        g.clients[user] = HangmanClient(vocab)
-        game = g.clients.get(user)
+    if user not in g.clients:
+        g.clients[user] = HangmanClient()
+    game = get_client(user)
+    answer = pick_answer(vocab)
+    game.new_game(answer, ascii_lowercase)
     return json.dumps(game.get_state())
 
 @app.route('/guess/<string:letter>', methods=['POST'])
 def guess(letter):
     user = register_user()
-    game = _get_game(user)
+    game = get_client(user)
     return json.dumps(game.guess(letter))
 
 @app.errorhandler(InvalidGuess)
