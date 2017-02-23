@@ -27,7 +27,8 @@ def pick_answer(vocab):
 app = Flask(__name__)
 app.secret_key = '8a1f9630c72259b25bf311bacdcabd3b1bdfa0f057f324cd'
 #app.secret_key = os.environ['SECRET_KEY']
-vocab = list(parse_vocab('./2of12.txt'))
+#vocab = list(parse_vocab('./2of12.txt'))
+vocab = list(parse_vocab('./trump.txt'))
 clients = {}
 
 def register_user():

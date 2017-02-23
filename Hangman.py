@@ -73,6 +73,7 @@ class HangmanClient:
     def get_state(self):
         """Returns an object representing the current game state"""
         payload = {
+          'incorrect_guesses': self.incorrect_guesses,
           'max_guesses': HangmanClient.MAX_GUESSES,
           'status': self.status.name,
           'guesses_left': HangmanClient.MAX_GUESSES - self.incorrect_guesses,

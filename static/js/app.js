@@ -5,9 +5,16 @@ document.addEventListener("DOMContentLoaded", function(event) {
   "use strict"; 
   let _state = {
     status: null,
+    incorrect_guesses: null,
+    max_guesses: null,
     guesses_left: null,
     letters_guessed: null,
     word_with_blanks: null,
+    won: null,
+    lost: null,
+    // Non-null when gameover status
+    letters_left: null,
+    answer: null
   };
 
   const valid_letters = /^[a-zA-z]$/i;
@@ -90,7 +97,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     `),
     directions: () => $(`
       <div id="${ids.dirs}">
-        <h4>This is a game of Hangman</h4>
+        <h4>Can you guess what word Trump is thinking?</h4>
         <h4>Press a letter on the keyboard to make a guess</h4>
         <h4>Hit 'Enter' to start</h4>
       </div>
@@ -145,26 +152,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
   }
 
   // Initializes the application.
+  // Recovers an existing game state
+  // Or renders the title screen
   function init() {
-    _render_start_scene();
-    const startBtn = $('#'+ids.btn);
-    const enterToStart = enterToPress(startBtn);
-    enterToStart.add();
-    startBtn.click(() => {
-      api.new_game()
-      .then(state => {
-        enterToStart.remove();
-        new_game(state);
-      })
-      .catch(e => {
-        _removeKeyHandler();
-        console.error(e);
-      });
-    });
+    api.get_game()
+    .then(start_game)
+    .catch(response => {
+      _render_title_scene();
+    })
   }
 
-  // Called once at the beginning of a game
-  function new_game(state) {
+  // Called once after title scene
+  function start_game(state) {
     _addKeyHandler();
     hide_hangman();
     update(state);
@@ -188,6 +187,22 @@ document.addEventListener("DOMContentLoaded", function(event) {
       console.error("Unhandled game state: ", state);
       reset();
     }
+  }
+
+  // Requests a new game and starts it
+  function new_game() {
+    _state = {};
+    api.new_game()
+    .then(start_game)
+    .catch(e => {
+      console.log("Failed to new_game and make new game", e);
+      reset();
+    });
+  }
+
+  // Called on unrecoverable state. Refreshes the page.
+  function reset() {
+      window.location = window.location;
   }
 
   // render helpers
@@ -224,11 +239,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
     return title;
   }
 
-  function reset() {
-    _state = {};
-    init();
-  }
-
   function clear() {
     const { header, content, footer } = containers;
     header.empty();
@@ -243,17 +253,23 @@ document.addEventListener("DOMContentLoaded", function(event) {
       word_with_blanks,
       letters_guessed,
       guesses_left,
+      incorrect_guesses,
       last_guess,
       max_guesses
     } = _state;
+    const letter_text = `<p>${letters_guessed.sort().join(' ')}</p>`
     _render_title();
     _render_blanks(word_with_blanks);
     _render_counter(guesses_left);
-    last_guess && _render_message(`
-      <p>You guessed '${last_guess}'</p>
-      <p>${letters_guessed.sort().join(' ')}</p>
+    _render_message(`
+      <p>
+        ${last_guess ? `You guessed ${last_guess}` : ''}
+      </p>
+      ${letter_text}
     `);
-    show_piece(max_guesses - guesses_left - 1);
+    for (let i=0; i<incorrect_guesses; i++) {
+      show_piece(i);
+    }
   }
 
   function _render_blanks(word) {
@@ -323,13 +339,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
     enterToPlay.add();
     btn.click(() => {
         enterToPlay.remove();
-        reset();
+        new_game();
     });
     return btn;
   }
 
-  // Initial start scene
-  function _render_start_scene() {
+  // Initial title scene
+  function _render_title_scene() {
     const { header, content, footer, hangman } = containers;
     const { directions, btn } = factory;
     clear();
@@ -338,6 +354,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     let title = _render_title();
     content.append(dirs);
     footer.append(startBtn);
+
     // Animation
     let scene = $()
       .add(title)
@@ -351,6 +368,21 @@ document.addEventListener("DOMContentLoaded", function(event) {
         interval: 300
       })
     show_hangman();
+
+    // Apply start button callbacks
+    const enterToStart = enterToPress(startBtn);
+    enterToStart.add();
+    startBtn.click(() => {
+      api.new_game()
+      .then(state => {
+        enterToStart.remove();
+        start_game(state);
+      })
+      .catch(e => {
+        _removeKeyHandler();
+        console.error(e);
+      });
+    });
   }
 
   init();
