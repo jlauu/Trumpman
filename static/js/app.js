@@ -27,11 +27,21 @@ document.addEventListener("DOMContentLoaded", function(event) {
     piece: i => 'hangman-'+i
   };
 
-  const api = {
-    new_game: () => fetch('/game/new', {method: 'POST'}),
-    get_game: () => fetch('/game', {method: 'GET'}),
-    guess: (c) => fetch('/guess/'+c, {method: 'POST'})
-  };
+  const api = (() => {
+    const getJSON = response => {
+      if (response.ok)
+        return response.json()
+      else
+        throw response
+    };
+    const get = {method: 'GET'};
+    const post = {method: 'POST'};
+    return {
+      new_game: () => fetch('/game/new', post).then(getJSON),
+      get_game: () => fetch('/game', get).then(getJSON),
+      guess: (c) => fetch('/guess/'+c, post).then(getJSON)
+    };
+  })();
 
   // Static containers should be rendered in static html
   const containers = {
@@ -100,18 +110,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
   function guess(letter) {
     _state.last_guess = letter;
-    api.guess(letter).then(response => {
-      if (response.ok) {
-        return response.json();
-      } else {
-        throw response.json();
-      }
-    })
-    .then(next_state => {
-      update(next_state);
-    })
+    api.guess(letter)
+    .then(update)
     .catch(err_json => {
-      return err_json
+      return err_json.json()
       .then(({message}) => {
          console.error(message);
          _render_message(message);
@@ -126,16 +128,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     const startBtn = $('#'+ids.btn);
     startBtn.click(() => {
       api.new_game()
-      .then(response => {
-        if (response.ok) {
-          return response.json();
-        } else {
-          throw new Error('Bad response');
-        }
-      })
-      .then(state => {
-        new_game(state);
-      })
+      .then(new_game)
       .catch(e => {
         _removeKeyHandler();
         console.error(e);

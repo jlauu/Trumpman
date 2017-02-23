@@ -2,6 +2,9 @@
 .env
 __pycache__/
 
+#vim
+.vimrc
+
 #npm
 node_modules/
 
