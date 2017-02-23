@@ -92,12 +92,25 @@ document.addEventListener("DOMContentLoaded", function(event) {
       <div id="${ids.dirs}">
         <h4>This is a game of Hangman</h4>
         <h4>Press a letter on the keyboard to make a guess</h4>
-        <h4>Hit 'Start Game!' to play</h4>
+        <h4>Hit 'Enter' to start</h4>
       </div>
-    `)
+    `),
   };
 
   // Event handlers
+  
+  const enterToPress = btn => {
+    const callback = e => {
+      if (e.keyCode && e.keyCode === 13) {
+        btn.click();
+      }
+    };
+    return {
+      callback,
+      remove: () => $(document).off('keypress', callback),
+      add: () => $(document).on('keypress', callback)
+    };
+  };
 
   const _handleKeypress = e => {
     const letter = e.key.toLowerCase().trim();
@@ -119,11 +132,14 @@ document.addEventListener("DOMContentLoaded", function(event) {
     api.guess(letter)
     .then(update)
     .catch(e => {
+      console.log("Bad guess response", e); 
       return e.json()
       .then(({message}) => {
-         console.error(message);
-         _render_message(message);
-         $('#'+ids.message).addClass('error');
+         _render_message(`<p>${message}</p>`);
+         const msg = $('#'+ids.message);
+         const lg = _state.letters_guessed;
+         msg.find('p:first-child').addClass('error')
+         msg.append(`<p>${lg.sort().join(' ')}</p>`);
       });
     });
   }
@@ -132,9 +148,14 @@ document.addEventListener("DOMContentLoaded", function(event) {
   function init() {
     _render_start_scene();
     const startBtn = $('#'+ids.btn);
+    const enterToStart = enterToPress(startBtn);
+    enterToStart.add();
     startBtn.click(() => {
       api.new_game()
-      .then(new_game)
+      .then(state => {
+        enterToStart.remove();
+        new_game(state);
+      })
       .catch(e => {
         _removeKeyHandler();
         console.error(e);
@@ -228,7 +249,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
     _render_title();
     _render_blanks(word_with_blanks);
     _render_counter(guesses_left);
-    last_guess && _render_message("You guessed '"+last_guess+"'");
+    last_guess && _render_message(`
+      <p>You guessed '${last_guess}'</p>
+      <p>${letters_guessed.sort().join(' ')}</p>
+    `);
     show_piece(max_guesses - guesses_left - 1);
   }
 
@@ -295,7 +319,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
         btn.remove();
     btn = factory.btn('Play again?');
     containers.footer.append(btn);
+    const enterToPlay = enterToPress(btn);
+    enterToPlay.add();
     btn.click(() => {
+        enterToPlay.remove();
         reset();
     });
     return btn;
