@@ -34,8 +34,14 @@ document.addEventListener("DOMContentLoaded", function(event) {
       else
         throw response
     };
-    const get = {method: 'GET'};
-    const post = {method: 'POST'};
+    const get = {
+        method: 'GET',
+        credentials: "same-origin"
+    };
+    const post = {
+        method: 'POST',
+        credentials: "same-origin"
+    };
     return {
       new_game: () => fetch('/game/new', post).then(getJSON),
       get_game: () => fetch('/game', get).then(getJSON),
@@ -112,8 +118,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
     _state.last_guess = letter;
     api.guess(letter)
     .then(update)
-    .catch(err_json => {
-      return err_json.json()
+    .catch(e => {
+      return e.json()
       .then(({message}) => {
          console.error(message);
          _render_message(message);
