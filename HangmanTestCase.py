@@ -19,6 +19,7 @@ class HangmanTestCase(unittest.TestCase):
         self.good_guess = choice(self.answer)
         self.invalid_guess = '@'
         self.initial_state = {
+          'incorrect_guesses': 0,
           'max_guesses': HangmanClient.MAX_GUESSES,
           'status': HangmanClient.Status.ongoing.name,
           'guesses_left': HangmanClient.MAX_GUESSES,
@@ -42,6 +43,7 @@ class HangmanTestCase(unittest.TestCase):
         # post bad guess state
         self.pbgs = self.initial_state.copy()
         self.pbgs.update({
+            'incorrect_guesses': 1,
             'letters_guessed': [self.bad_guess],
             'word_with_blanks': pbgs_blanks,
             'guesses_left': HangmanClient.MAX_GUESSES - 1
@@ -166,6 +168,7 @@ class HangmanTestCase(unittest.TestCase):
             state = game.guess(c)
             expected['letters_guessed'].add(c)
         expected.update({
+            'incorrect_guesses': 10,
             'status': HangmanClient.Status.lost.name,
             'guesses_left': 0,
             'won': 0,
