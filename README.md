@@ -1,4 +1,5 @@
 # Hangman
+Solution for a take-home coding assignment. The requirement was to implement a game of hangman using whatever stack.
 
 ```
 cd Trumpman
